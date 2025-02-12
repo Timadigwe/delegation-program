@@ -52,8 +52,8 @@ pub mod delegation_program {
         );
 
         // Calculate amount of lamports to transfer
-        let rent = Rent::get()?;
-        let min_rent = rent.minimum_balance(DelegatedAccount::LEN);
+        // let rent = Rent::get()?;
+        // let min_rent = rent.minimum_balance(DelegatedAccount::LEN);
         
         // Transfer SOL from PDA to user
         **delegated_account.to_account_info().try_borrow_mut_lamports()? = delegated_account
