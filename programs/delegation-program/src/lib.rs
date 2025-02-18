@@ -10,20 +10,20 @@ use state::*;
 pub mod delegation_program {
     use super::*;
 
-    pub fn initialize_delegate(ctx: Context<InitializeDelegate>) -> Result<()> {
+    pub fn initialize_delegate(ctx: Context<InitializeDelegate>, amount: u64) -> Result<()> {
+        // Get account info before mutable borrow
+        let delegated_account_info = ctx.accounts.delegated_account.to_account_info();
+        
         let delegated_account = &mut ctx.accounts.delegated_account;
         delegated_account.owner = ctx.accounts.owner.key();
         delegated_account.delegated_amount = 0;
         delegated_account.last_deposit_time = Clock::get()?.unix_timestamp;
         delegated_account.bump = ctx.bumps.delegated_account;
-        Ok(())
-    }
 
-    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
-        // Transfer SOL from user to PDA
+        // Process the initial deposit using stored account info
         let transfer_ix = system_program::Transfer {
             from: ctx.accounts.owner.to_account_info(),
-            to: ctx.accounts.delegated_account.to_account_info(),
+            to: delegated_account_info,
         };
 
         system_program::transfer(
@@ -34,16 +34,10 @@ pub mod delegation_program {
             amount,
         )?;
 
-        // Update state
-        let delegated_account = &mut ctx.accounts.delegated_account;
-        delegated_account.delegated_amount = delegated_account.delegated_amount.checked_add(amount)
-            .ok_or(ErrorCode::AmountOverflow)?;
-        delegated_account.last_deposit_time = Clock::get()?.unix_timestamp;
-
+        delegated_account.delegated_amount = amount;
         Ok(())
     }
 
-    // Add withdraw function if needed
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         let delegated_account = &mut ctx.accounts.delegated_account;
         require!(
@@ -87,22 +81,6 @@ pub struct InitializeDelegate<'info> {
         space = DelegatedAccount::LEN,
         seeds = [b"delegate", owner.key().as_ref()],
         bump
-    )]
-    pub delegated_account: Account<'info, DelegatedAccount>,
-    
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct Deposit<'info> {
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    
-    #[account(
-        mut,
-        seeds = [b"delegate", owner.key().as_ref()],
-        bump = delegated_account.bump,
-        constraint = delegated_account.owner == owner.key()
     )]
     pub delegated_account: Account<'info, DelegatedAccount>,
     

@@ -10,8 +10,13 @@ describe("delegation-program", () => {
 
   const program = anchor.workspace.DelegationProgram as Program<DelegationProgram>;
 
-  it("Is initialized!", async () => {
-    const tx = await program.methods.initializeDelegate().rpc();
+  it("Is initialized with deposit!", async () => {
+    // Initial deposit amount (1 SOL)
+    const amount = new anchor.BN(1 * anchor.web3.LAMPORTS_PER_SOL);
+    
+    const tx = await program.methods
+      .initializeDelegate(amount)
+      .rpc();
     console.log("Your transaction signature", tx);
   });
 
@@ -20,11 +25,11 @@ describe("delegation-program", () => {
     const programId = program.programId;
 
     const [delegateAccount] = PublicKey.findProgramAddressSync(
-        [
-            Buffer.from("delegate"),
-            userWallet.toBuffer()
-        ],
-        programId
+      [
+        Buffer.from("delegate"),
+        userWallet.toBuffer()
+      ],
+      programId
     );
 
     console.log("Delegate account:", delegateAccount.toString());
